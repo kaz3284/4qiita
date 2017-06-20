@@ -1,9 +1,10 @@
 package main
 
 import com.spotify.scio.ContextAndArgs
+import services.UserSegmentation.SaveSegmentation
 import services._
 
-object Main {
+object SegmentationMain {
 
   def main(cmdlineArgs: Array[String]): Unit = {
     val (sc, args) = ContextAndArgs(cmdlineArgs)

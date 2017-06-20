@@ -10,7 +10,7 @@ case class Segment(id: Long, unitId: Long, actionId: Long, frequency: Int, priva
   /**
     * @param count
     * */
-  def isFill(count: Int): Boolean = freqSymbol.generateCondition(frequency)(count)
+  def isFill(count: Option[Int]): Boolean = freqSymbol.generateCondition(frequency)(count.getOrElse(0))
 }
 
 object Segment extends SQLSyntaxSupport[Segment] {
@@ -43,7 +43,7 @@ object FreqSymbol {
     def generateCondition(frequency: Int) = (count: Int) => count == frequency
   }
 
-  // frequencyがvalue以上か判定
+  // frequencyがvalue以下か判定
   case object LESS_THAN extends FreqSymbol {
     def id = 3
     def generateCondition(frequency: Int) = (count: Int) => count <= frequency

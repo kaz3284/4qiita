@@ -1,5 +1,7 @@
 package models.bq
 
+import models.Action
+
 /**
   *
   * */
