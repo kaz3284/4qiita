@@ -14,11 +14,14 @@ object SegmentationMain {
     // DB(mysql)からマスタ情報取得
     val segmentsSi = sc.parallelize(FindSegments()).asIterableSideInput
 
-    // ユーザを行動履歴を元にsegmentation(userInfo)
-    val userInfos = UserSegmentation(1,input, output, sc, segmentsSi)
+    // ユーザを行動履歴を元にsegmentation(unit_idは1へ指定)
+    val segmentationResult = UserSegmentation(1,input, output, sc, segmentsSi)
 
     // segmentation結果をbqへ永続化
-    SaveSegmentation(userInfos,output)
+    SaveSegmentation(segmentationResult, output)
+
+    // bqへload
+
 
     sc.close()
   }

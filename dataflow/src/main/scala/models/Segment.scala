@@ -2,7 +2,7 @@ package models
 
 import scalikejdbc._
 
-case class Segment(id: Long, unitId: Long, actionId: Long, frequency: Int, private val symbol: Int) {
+case class Segment(id: Long, unitId: Int, actionId: Long, frequency: Int, private val symbol: Int) {
 
   // symbolの値に応じたFreqSymbol(MORE_THAN, EQUAL, LESS_THAN)
   private val freqSymbol = FreqSymbol.valueOf(symbol)
@@ -18,7 +18,7 @@ object Segment extends SQLSyntaxSupport[Segment] {
   private val s = syntax("s")
 
   def apply(column: ResultName[Segment])(rs: WrappedResultSet): Segment = {
-    Segment(rs.long(column.id), rs.long(column.unitId), rs.long(column.actionId), rs.int(column.frequency), rs.int(column.symbol))
+    Segment(rs.long(column.id), rs.int(column.unitId), rs.long(column.actionId), rs.int(column.frequency), rs.int(column.symbol))
   }
 }
 

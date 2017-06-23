@@ -1,10 +1,15 @@
 package services
 
-import models.{Action, Segment, SegmentationResult}
+import models.{Action, Segment, SegmentationResultTmp}
 import com.spotify.scio._
 import com.spotify.scio.bigquery._
 import com.spotify.scio.values.{SCollection, SideInput}
-import models.bq.UserHistory
+import models.bq.{SegmentationResult, UserHistory}
+
+import org.json4s._
+import org.json4s.jackson.Serialization
+import org.json4s.jackson.JsonMethods._
+
 
 object UserSegmentation {
 
@@ -17,7 +22,7 @@ object UserSegmentation {
     * @param segmentsSi
     * @return
     */
-  def apply(unitId: Long, input: String, output: String, sc: ScioContext, segmentsSi: SideInput[Iterable[Segment]]): SCollection[Set[SegmentationResult]] = {
+  def apply(unitId: Int, input: String, output: String, sc: ScioContext, segmentsSi: SideInput[Iterable[Segment]]): SCollection[Set[SegmentationResultTmp]] = {
 
     // bqに入っているデータを取り出して
     val userHistories = sc.bigQueryTable(input)
@@ -38,24 +43,26 @@ object UserSegmentation {
   }
 
   object SaveSegmentation {
-
+    implicit val formats = Serialization.formats(NoTypeHints)
     /**
       *
-      * @param userInfos
+      * @param segmentationResultTmps
       * @param output
       */
-    def apply(userInfos: SCollection[Set[SegmentationResult]], output: String): Unit ={
-      userInfos.saveAsTextFile(output)
+    def apply(segmentationResultTmps: SCollection[Set[SegmentationResultTmp]], output: String): Unit ={
+      segmentationResultTmps.flatMap(srt => srt.map(r => compact(render(parse(Serialization.write(SegmentationResult(r.unitId, r.userId, r.filledSegmentId))).snakizeKeys)))).saveAsTextFile(output)
     }
   }
 
+
+
   // frequency条件を満たすSet(segmentId)を返す。
-  private def findFilledSegmentIds(userId: String, actionIdCountMap: Map[Long, Int], segments: Iterable[Segment]): Set[SegmentationResult] = {
+  private def findFilledSegmentIds(userId: String, actionIdCountMap: Map[Long, Int], segments: Iterable[Segment]): Set[SegmentationResultTmp] = {
     segments.filter { case s: Segment =>
       if (actionIdCountMap.get(s.actionId).isEmpty) false
       else s.isFill(actionIdCountMap.get(s.actionId))
     }.map{case s: Segment =>
-      SegmentationResult(s.unitId, userId, s.id, s.actionId, actionIdCountMap.get(s.actionId))
+      SegmentationResultTmp(s.unitId, userId, s.id, s.actionId, actionIdCountMap.get(s.actionId))
     }.toSet
   }
 }
