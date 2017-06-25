@@ -4,14 +4,15 @@ import models.Segment
 import scalikejdbc._
 
 
-object FindSegments {
+object ReferDbService {
 
-  Class.forName("com.mysql.jdbc.Driver")
-  scalikejdbc.ConnectionPool.singleton("jdbc:mysql://stg-gidb1:3306/dataflow_test", "rssad", "")
   implicit val session = AutoSession
   val sf = Segment.syntax
 
-  def apply(): List[Segment] = {
+  def findSegments(jdbcUri: String, dbUser: String): List[Segment] = {
+    Class.forName("com.mysql.jdbc.Driver")
+    scalikejdbc.ConnectionPool.singleton(jdbcUri, dbUser, "")
+
     withSQL {
       select.from(Segment as sf)
     }.map(Segment(sf.resultName))

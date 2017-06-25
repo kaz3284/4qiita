@@ -1,5 +1,7 @@
 package models
 
+import com.spotify.scio.bigquery.types.BigQueryType
+
 /**
   *
   * @param unitId

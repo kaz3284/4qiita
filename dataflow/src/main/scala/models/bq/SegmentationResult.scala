@@ -1,5 +1,7 @@
 package models.bq
 
+import com.spotify.scio.bigquery.types.BigQueryType
+
 
 /**
   *
@@ -7,5 +9,5 @@ package models.bq
   * @param userId
   * @param segmentId
   */
+@BigQueryType.toTable
 case class SegmentationResult(unitId: Int, userId: String, segmentId: Long)
-

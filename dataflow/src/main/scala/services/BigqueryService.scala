@@ -3,12 +3,9 @@ package services
 import models.{Action, Segment, SegmentationResultTmp}
 import com.spotify.scio._
 import com.spotify.scio.bigquery._
-import com.spotify.scio.values.{SCollection, SideInput}
+import com.spotify.scio.values.SideInput
 import models.bq.{SegmentationResult, UserHistory}
-
-import org.json4s._
-import org.json4s.jackson.Serialization
-import org.json4s.jackson.JsonMethods._
+import org.apache.beam.sdk.io.gcp.bigquery.BigQueryIO.Write
 
 
 object UserSegmentation {
@@ -22,9 +19,9 @@ object UserSegmentation {
     * @param segmentsSi
     * @return
     */
-  def apply(unitId: Int, input: String, output: String, sc: ScioContext, segmentsSi: SideInput[Iterable[Segment]]): SCollection[Set[SegmentationResultTmp]] = {
+  def apply(unitId: Int, input: String, output: String, sc: ScioContext, segmentsSi: SideInput[Iterable[Segment]]): Unit = {
 
-    // bqに入っているデータを取り出して
+    // bigqueryに入っている履歴データを処理に適したデータへ
     val userHistories = sc.bigQueryTable(input)
         .map {row =>
           val userId = row.getString("user_id")
@@ -32,29 +29,16 @@ object UserSegmentation {
           UserHistory(unitId, userId, actionHistory)
         }
 
-    val segmentationResults = userHistories.withSideInputs(segmentsSi)
-      .map { (userHistory, si) =>
-          val segments = si(segmentsSi)
-          val actionIdCountMap = userHistory.actionHistory.groupBy(_.actionId).mapValues(_.size)
-          findFilledSegmentIds(userHistory.userId, actionIdCountMap, segments)
+    // マスタデータを副入力で取り込み,処理結果をbigqueryへ保存
+    userHistories.withSideInputs(segmentsSi)
+      .flatMap { (userHistory, si) =>
+        val segments = si(segmentsSi)
+        val actionIdCountMap = userHistory.actionHistory.groupBy(_.actionId).mapValues(_.size)
+        findFilledSegmentIds(userHistory.userId, actionIdCountMap, segments)
+          .map(r => SegmentationResult(r.unitId, r.userId, r.filledSegmentId))
       }.toSCollection
-
-    return segmentationResults
+      .saveAsTypedBigQuery(output, Write.WriteDisposition.WRITE_TRUNCATE, Write.CreateDisposition.CREATE_IF_NEEDED)
   }
-
-  object SaveSegmentation {
-    implicit val formats = Serialization.formats(NoTypeHints)
-    /**
-      *
-      * @param segmentationResultTmps
-      * @param output
-      */
-    def apply(segmentationResultTmps: SCollection[Set[SegmentationResultTmp]], output: String): Unit ={
-      segmentationResultTmps.flatMap(srt => srt.map(r => compact(render(parse(Serialization.write(SegmentationResult(r.unitId, r.userId, r.filledSegmentId))).snakizeKeys)))).saveAsTextFile(output)
-    }
-  }
-
-
 
   // frequency条件を満たすSet(segmentId)を返す。
   private def findFilledSegmentIds(userId: String, actionIdCountMap: Map[Long, Int], segments: Iterable[Segment]): Set[SegmentationResultTmp] = {
