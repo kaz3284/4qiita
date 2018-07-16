@@ -4,7 +4,7 @@ import models.{Action, Segment, SegmentationResultTmp}
 import com.spotify.scio._
 import com.spotify.scio.bigquery._
 import com.spotify.scio.values.SideInput
-import models.bq.{SegmentationResult, UserHistory}
+import models.bq.{SegmentationResultBqTable, UserHistory}
 import org.apache.beam.sdk.io.gcp.bigquery.BigQueryIO.Write
 
 
@@ -35,7 +35,7 @@ object UserSegmentation {
         val segments = si(segmentsSi)
         val actionIdCountMap = userHistory.actionHistory.groupBy(_.actionId).mapValues(_.size)
         findFilledSegmentIds(userHistory.userId, actionIdCountMap, segments)
-          .map(r => SegmentationResult(r.unitId, r.userId, r.filledSegmentId))
+          .map(r => SegmentationResultBqTable.SegmentationResult(r.unitId, r.userId, r.filledSegmentId))
       }.toSCollection
       .saveAsTypedBigQuery(output, Write.WriteDisposition.WRITE_TRUNCATE, Write.CreateDisposition.CREATE_IF_NEEDED)
   }

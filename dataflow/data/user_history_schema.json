@@ -1,0 +1,4 @@
+[
+  {"name":"user_id","type":"STRING","mode":"required"},
+  {"name":"action_history","type":"STRING","mode":"nullable"}
+]
